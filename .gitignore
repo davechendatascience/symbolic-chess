@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+*.log
+
+# Data (regenerate from scripts)
+data/
+*.parquet
+*.pkl
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+.vs/
+
+# C++ build artefacts (math-engine-cpp has its own .gitignore too)
+build/
+*.exe
+*.obj
+*.o
+*.a
+*.lib
+*.pdb
+*.ilk
+
+# PySR / Julia
+outputs/
+*.bkup
+
+# Local scratch
+scratch/
+notes_*.md

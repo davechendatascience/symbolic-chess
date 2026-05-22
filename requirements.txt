@@ -1,0 +1,19 @@
+# Core Python framework
+numpy
+scipy
+pandas
+pyarrow
+
+# Chess
+python-chess
+
+# Symbolic regression
+pysr
+sympy
+
+# Baselines + analysis
+scikit-learn
+matplotlib
+
+# Testing
+pytest
