@@ -9,12 +9,30 @@
 // Both return ints in centipawn-equivalent units, WHITE perspective.
 
 #include "eval.h"
+#include "eval_dyn.h"
 
 #include "chess.hpp"
 
+#include <memory>
 #include <string>
 
 namespace math_engine::eval {
+
+namespace {
+std::shared_ptr<const eval_dyn::StrategySpec> g_dyn_strategy;
+}
+
+void set_dynamic_strategy(std::shared_ptr<const eval_dyn::StrategySpec> spec) {
+    g_dyn_strategy = std::move(spec);
+}
+
+void clear_dynamic_strategy() {
+    g_dyn_strategy.reset();
+}
+
+std::string active_strategy_id() {
+    return g_dyn_strategy ? g_dyn_strategy->id : std::string("cx13_iter0");
+}
 
 namespace {
 
@@ -157,6 +175,9 @@ int evaluate_sr_cx13(const chess::Board& board) {
 }
 
 int evaluate(const chess::Board& board) {
+    if (g_dyn_strategy) {
+        return eval_dyn::evaluate(*g_dyn_strategy, board);
+    }
     return evaluate_sr_cx13(board);
 }
 

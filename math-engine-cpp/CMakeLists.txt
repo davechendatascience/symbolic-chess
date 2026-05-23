@@ -31,10 +31,16 @@ add_library(math_engine_core STATIC
     src/uci.cpp
     src/search.cpp
     src/eval.cpp
+    src/eval_dyn.cpp
+    src/ast.cpp
+    src/features.cpp
     src/tt.cpp
 )
 target_link_libraries(math_engine_core PUBLIC chess_library)
-target_include_directories(math_engine_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(math_engine_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+)
 
 # Main executable
 add_executable(math_engine src/main.cpp)
