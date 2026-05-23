@@ -1,0 +1,56 @@
+{
+  "id": "iter1_joint",
+  "version": 1,
+  "provenance": {
+    "method": "self_play_iter1_joint",
+    "iter": 1,
+    "source_doc": "benchmarks/results/pysr_self_play_iter1.md",
+    "pareto_complexity": 9,
+    "self_play_games": 500,
+    "self_play_depth": 5,
+    "stockfish_depth": 15,
+    "test_r2_joint": 0.3907827095843004,
+    "test_r2_outcome_z": 0.11386342787920578,
+    "test_r2_sfcp_z": 0.4761101083177116,
+    "test_tau_sfcp": 0.5295452029585531,
+    "notes": "iter-1 from math-engine-cpp self-play + Stockfish joint labels. Pareto pick: highest joint test R2 with cx<=15. Engine still implements cx=13 from iter-0 \u2014 port this expression into eval.cpp + recompile to make it the engine's actual strategy."
+  },
+  "engine": {
+    "uci_binary": "math-engine-cpp/build/math_engine.exe",
+    "default_depth": 5,
+    "implements_strategy_id": "cx13_iter0",
+    "pending_port_of": "iter1_joint"
+  },
+  "features": [
+    "WB_count",
+    "central_BN",
+    "central_BP",
+    "material_net"
+  ],
+  "material_unit_weights": {
+    "P": 1.0,
+    "N": 3.0,
+    "B": 3.0,
+    "R": 5.0,
+    "Q": 9.0
+  },
+  "constants": {},
+  "expression": "(material_net + ((WB_count - central_BP) - central_BN)) * 0.17522278",
+  "sympy_format": "(WB_count - central_BN - central_BP + material_net)*0.17522278",
+  "expression_tree": {
+    "op": "mul",
+    "args": [
+      {"op": "add", "args": [
+        {"var": "material_net"},
+        {"op": "sub", "args": [
+          {"op": "sub", "args": [{"var": "WB_count"}, {"var": "central_BP"}]},
+          {"var": "central_BN"}
+        ]}
+      ]},
+      {"const": 0.17522278}
+    ]
+  },
+  "output_scale": 100.0,
+  "safe_div": true,
+  "output_units": "joint_zscore_outcome_plus_sfcp"
+}

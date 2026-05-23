@@ -70,6 +70,20 @@ python benchmarks/cpp_engine_vs_stockfish.py --n-games 20 --math-depth 6 \
 | Stockfish-eval distillation benchmark | `docs/benchmark_stockfish_distillation.md` | iter-0 shipped, larger corpus pending |
 | KPK equilibrium test | `docs/kpk_equilibrium_distillation.md` | shipped (concept-level success) |
 | math-engine-cpp v0 | `docs/math_engine_cpp_v0.md` | shipped (TT + quiescence + ID + UCI) |
+| Play the engine (human vs. UCI, web board) | `docs/play_human.md` | shipped |
+
+## Play it
+
+```
+cd symbolic-chess
+$env:PYTHONPATH = "src"            # or PYTHONPATH=src on POSIX
+python -m symbolic_chess.play      # http://127.0.0.1:8080/
+```
+
+Loads `strategies/cx13_iter0.json` (the current eval) and serves a
+chessboard.js UI that talks to `math-engine-cpp` over UCI. See
+`docs/play_human.md` for the strategy-spec schema and how to swap in a
+self-play-distilled spec.
 
 ## License
 

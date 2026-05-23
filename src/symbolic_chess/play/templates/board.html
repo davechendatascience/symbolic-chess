@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>symbolic-chess — play</title>
+<link rel="stylesheet"
+      href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; color: #222; }
+  #board { width: 480px; }
+  .row { display: flex; gap: 16px; align-items: center; margin: 12px 0; }
+  .status { font-family: ui-monospace, Consolas, monospace; padding: 8px; background: #f4f4f4; border-radius: 6px; min-height: 1.4em; }
+  .meta { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #666; }
+  button { padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  label { font-size: 14px; }
+  h1 { margin-bottom: 4px; }
+  .subtitle { color: #666; margin-top: 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>symbolic-chess</h1>
+<p class="subtitle">human vs. math-engine-cpp (eval: <span id="strategy">__STRATEGY_ID__</span>, depth <span id="depth">__DEPTH__</span>)</p>
+
+<div id="board"></div>
+
+<div class="row">
+  <button id="new-white">New game (you = White)</button>
+  <button id="new-black">New game (you = Black)</button>
+  <label>Depth <input id="depth-input" type="number" min="1" max="10" value="__DEPTH__" style="width:48px"></label>
+</div>
+
+<div class="status" id="status">Click "New game" to begin.</div>
+<div class="meta" id="meta"></div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+let game = new Chess();
+let humanColor = 'w';   // 'w' or 'b'
+let busy = false;
+
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+function setMeta(msg) { document.getElementById('meta').textContent = msg; }
+function depth() { return parseInt(document.getElementById('depth-input').value || '5', 10); }
+
+const board = Chessboard('board', {
+  draggable: true,
+  position: 'start',
+  pieceTheme: 'https://lichess1.org/assets/piece/cburnett/{piece}.svg',
+  onDragStart: function(source, piece) {
+    if (busy) return false;
+    if (game.game_over()) return false;
+    if (game.turn() !== humanColor) return false;
+    if ((humanColor === 'w' && piece.search(/^b/) !== -1) ||
+        (humanColor === 'b' && piece.search(/^w/) !== -1)) return false;
+  },
+  onDrop: function(source, target) {
+    const move = game.move({ from: source, to: target, promotion: 'q' });
+    if (move === null) return 'snapback';
+    afterHumanMove(move);
+  },
+  onSnapEnd: function() { board.position(game.fen()); }
+});
+
+async function newGame(youAre) {
+  humanColor = youAre;
+  game = new Chess();
+  board.orientation(youAre === 'w' ? 'white' : 'black');
+  board.position('start');
+  setStatus('New game. You are ' + (youAre === 'w' ? 'White' : 'Black') + '.');
+  setMeta('');
+  await fetch('/api/new', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ human: youAre })
+  });
+  if (youAre === 'b') await engineMove();
+}
+
+async function afterHumanMove(move) {
+  board.position(game.fen());
+  if (game.game_over()) { setStatus(gameOverMsg()); return; }
+  await engineMove(move.from + move.to + (move.promotion || ''));
+}
+
+async function engineMove(humanUci) {
+  busy = true;
+  setStatus('Engine thinking...');
+  const t0 = performance.now();
+  const r = await fetch('/api/move', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ human_move: humanUci || null, depth: depth() })
+  });
+  const data = await r.json();
+  const dt = (performance.now() - t0) / 1000;
+  busy = false;
+  if (data.error) { setStatus('Error: ' + data.error); return; }
+  if (data.engine_move) {
+    const ok = game.move({
+      from: data.engine_move.substring(0, 2),
+      to: data.engine_move.substring(2, 4),
+      promotion: data.engine_move.length >= 5 ? data.engine_move[4] : 'q'
+    });
+    if (!ok) { setStatus('Engine returned illegal move: ' + data.engine_move); return; }
+    board.position(game.fen());
+    setMeta('engine: ' + data.engine_move + '  (' + dt.toFixed(2) + 's, depth ' + depth() + ')');
+  }
+  if (game.game_over()) setStatus(gameOverMsg());
+  else setStatus(game.turn() === humanColor ? 'Your move.' : 'Engine to move.');
+}
+
+function gameOverMsg() {
+  if (game.in_checkmate()) return 'Checkmate. ' + (game.turn() === humanColor ? 'You lose.' : 'You win.');
+  if (game.in_stalemate()) return 'Stalemate. Draw.';
+  if (game.in_threefold_repetition()) return 'Threefold repetition. Draw.';
+  if (game.insufficient_material()) return 'Insufficient material. Draw.';
+  if (game.in_draw()) return 'Draw (50-move or other).';
+  return 'Game over.';
+}
+
+document.getElementById('new-white').addEventListener('click', () => newGame('w'));
+document.getElementById('new-black').addEventListener('click', () => newGame('b'));
+</script>
+</body>
+</html>

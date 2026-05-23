@@ -1,0 +1,49 @@
+{
+  "id": "cx13_iter0",
+  "version": 1,
+  "provenance": {
+    "method": "pysr_stockfish_distillation",
+    "iter": 0,
+    "source_doc": "benchmarks/results/pysr_chess_stockfish.md",
+    "pareto_complexity": 13,
+    "notes": "iter-0 eval distilled from ~5k Stockfish-labelled positions. Used as the eval inside math-engine-cpp v0 (search.cpp / eval.cpp). Self-play (Architecture A) iter-1+ replaces this spec with a new one."
+  },
+  "engine": {
+    "uci_binary": "math-engine-cpp/build/math_engine.exe",
+    "default_depth": 5
+  },
+  "features": [
+    "material_net",
+    "W_mobility",
+    "central_BP",
+    "central_BB",
+    "B_king_zone_own_pawns"
+  ],
+  "material_unit_weights": {
+    "P": 1.0,
+    "N": 3.0,
+    "B": 3.0,
+    "R": 5.0,
+    "Q": 9.0
+  },
+  "constants": {
+    "c_mat_div": 0.01460058,
+    "c_denom_offset": 1.3168311
+  },
+  "expression": "(material_net / c_mat_div) - ((W_mobility * central_BP) / ((c_denom_offset - B_king_zone_own_pawns) - central_BB))",
+  "expression_tree": {
+    "op": "sub",
+    "args": [
+      {"op": "div", "args": [{"var": "material_net"}, {"const": 0.01460058}]},
+      {"op": "div", "args": [
+        {"op": "mul", "args": [{"var": "W_mobility"}, {"var": "central_BP"}]},
+        {"op": "sub", "args": [
+          {"op": "sub", "args": [{"const": 1.3168311}, {"var": "B_king_zone_own_pawns"}]},
+          {"var": "central_BB"}
+        ]}
+      ]}
+    ]
+  },
+  "safe_div": true,
+  "output_units": "centipawns_white_perspective"
+}
