@@ -17,6 +17,11 @@ dependencies = [
     "python-chess",
     "sympy",
     "scikit-learn",
+    # Symbolic regression engine. Pinned by commit hash to preserve
+    # reproducibility while tessera evolves rapidly during this port.
+    # When tessera stabilises (or publishes to PyPI), this can become
+    # a versioned dependency.
+    "tessera @ git+https://github.com/davechendatascience/tessera.git@0937f67cd6c43e72d72b2640ec1238073bf4d6e3",
 ]
 
 [project.optional-dependencies]

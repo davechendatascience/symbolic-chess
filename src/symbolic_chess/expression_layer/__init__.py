@@ -48,8 +48,19 @@ from .core import (
 # PySR adapter — deferred Julia/pysr imports, safe to import here
 from .pysr_adapter import (
     expand_temporal_bank, run_pysr, fit_recurrence_step,
-    sympy_to_expr, equation_table,
+    sympy_to_expr,
 )
+# Re-export the PySR equation_table under its full name for clarity
+from .pysr_adapter import equation_table as pysr_equation_table
+# Tessera adapter — pure-Python SR backend (replaces PySR's Julia dep)
+from .tessera_adapter import (
+    run_tessera, tessera_node_to_expr,
+    equation_table as tessera_equation_table,
+)
+# Default `equation_table` points to the tessera flavour (the new default
+# backend); old callers that want PySR's equations should use
+# `pysr_equation_table`.
+equation_table = tessera_equation_table
 
 __all__ = [
     "Variable", "Constant", "Operator", "HigherOrderOperator", "Expr", "REGISTRY",
@@ -60,5 +71,7 @@ __all__ = [
     "fold", "scan",
     "compile_expr",
     "expand_temporal_bank", "run_pysr", "fit_recurrence_step",
-    "sympy_to_expr", "equation_table",
+    "sympy_to_expr",
+    "run_tessera", "tessera_node_to_expr",
+    "equation_table", "pysr_equation_table", "tessera_equation_table",
 ]
