@@ -25,7 +25,9 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-from symbolic_chess.expression_layer import Variable, run_pysr, equation_table
+from symbolic_chess.expression_layer import (
+    Variable, run_tessera, equation_table, predict_with_tree,
+)
 
 import kpk_corpus  # benchmarks/kpk_corpus.py
 from kpk_corpus import FEATURE_NAMES, build_kpk_corpus
@@ -110,34 +112,31 @@ def fit_baselines(train_df, test_df, X_train, X_test, y_train, y_test, feature_n
 
 # ---------------- PySR ----------------
 
-def run_pysr_pipeline(X_train, y_train, X_test, y_test, feature_names):
+def run_pipeline(X_train, y_train, X_test, y_test, feature_names):
     """Returns list of {complexity, loss, equation, test_acc} dicts."""
     variables = [Variable(name, X_train[:, j]) for j, name in enumerate(feature_names)]
     print(f"  PySR on {X_train.shape[0]} train rows, {len(feature_names)} features")
     try:
-        model, _ = run_pysr(
+        gp, _ = run_tessera(
             variables, y_train,
             binary_operators=["+", "-", "*", "/"],
             unary_operators=["abs", "tanh"],
             niterations=PYSR_NITER, populations=PYSR_POPS,
             population_size=PYSR_POP_SIZE, maxsize=PYSR_MAXSIZE,
             parsimony=PYSR_PARSIMONY,
-            verbosity=1, procs=1, random_state=0,
+            verbose=True, random_state=0,
         )
     except Exception as e:
         print(f"PySR failed: {type(e).__name__}: {e}")
         return None
 
-    eqs = equation_table(model)
+    eqs = equation_table(gp)
     eq_with_test = []
     for r in eqs:
         if not np.isfinite(r["loss"]):
             continue
         try:
-            idx = next(i for i, row in enumerate(model.equations_.itertuples())
-                       if row.complexity == r["complexity"]
-                       and abs(row.loss - r["loss"]) < 1e-12)
-            y_pred = model.predict(X_test, index=idx)
+            y_pred = predict_with_tree(r["tree"], X_test, feature_names)
             eq_with_test.append({
                 **r,
                 "test_acc": binary_accuracy(y_test, y_pred),
@@ -259,7 +258,7 @@ def main():
     eq_results = []
     if not args.skip_pysr:
         print("\n--- PySR ---")
-        eq_results = run_pysr_pipeline(X_train, y_train, X_test, y_test, FEATURE_NAMES) or []
+        eq_results = run_pipeline(X_train, y_train, X_test, y_test, FEATURE_NAMES) or []
         if eq_results:
             best = max(eq_results, key=lambda r: r["test_acc"])
             print(f"\nBest PySR: cx={best['complexity']} | test_acc={best['test_acc']:.4f}")

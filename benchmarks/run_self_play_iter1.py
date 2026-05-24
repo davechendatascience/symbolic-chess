@@ -39,7 +39,9 @@ import chess.engine
 from sklearn.linear_model import LinearRegression
 from scipy.stats import kendalltau
 
-from symbolic_chess.expression_layer import Variable, run_pysr, equation_table
+from symbolic_chess.expression_layer import (
+    Variable, run_tessera, equation_table, predict_with_tree,
+)
 from symbolic_chess.expression_layer.board import encode_corpus, chess_feature_bank
 from symbolic_chess.chess_engine.self_play import decay_outcome
 
@@ -165,34 +167,32 @@ def fit_baselines(X_train, y_train, X_test, y_test, feature_names, material_idx)
     return out
 
 
-def run_pysr_joint(X_train, y_train, X_test, y_test, feature_names, y2_test_outcome, y2_test_sfcp,
+def run_joint(X_train, y_train, X_test, y_test, feature_names, y2_test_outcome, y2_test_sfcp,
                    y_train_outcome_z, y_train_sfcp_z):
     """Fit PySR on joint target; evaluate Pareto on each component."""
     variables = [Variable(name, X_train[:, j]) for j, name in enumerate(feature_names)]
     print(f"  PySR on {X_train.shape[0]} train rows, {len(feature_names)} features")
     try:
-        model, _ = run_pysr(
+        gp, _ = run_tessera(
             variables, y_train,
             binary_operators=["+", "-", "*", "/", "min", "max"],
             unary_operators=["tanh", "abs", "sign"],
             niterations=PYSR_NITER, populations=PYSR_POPS,
             population_size=PYSR_POP_SIZE, maxsize=PYSR_MAXSIZE,
             parsimony=PYSR_PARSIMONY,
-            verbosity=1, procs=1, random_state=2026,
+            verbose=True, random_state=2026,
         )
     except Exception as e:
         print(f"PySR failed: {type(e).__name__}: {e}")
         return None, None
 
-    eqs = equation_table(model)
+    eqs = equation_table(gp)
     rows = []
     for r in eqs:
         if not np.isfinite(r["loss"]):
             continue
         try:
-            idx = next(i for i, row in enumerate(model.equations_.itertuples())
-                       if row.complexity == r["complexity"] and abs(row.loss - r["loss"]) < 1e-12)
-            y_pred = model.predict(X_test, index=idx)
+            y_pred = predict_with_tree(r["tree"], X_test, feature_names)
             r2_joint = _r2(y_test, y_pred)
             r2_outcome = _r2(y2_test_outcome, y_pred)
             r2_sfcp = _r2(y2_test_sfcp, y_pred)
@@ -428,7 +428,7 @@ def main():
 
     # 8. PySR
     print("\n--- PySR (joint target) ---")
-    model, eq_results = run_pysr_joint(
+    model, eq_results = run_joint(
         X_train, y_train, X_test, y_test, feature_names,
         y_test_outcome_z, y_test_sfcp_z,
         yo_z[train_idx], ys_z[train_idx],

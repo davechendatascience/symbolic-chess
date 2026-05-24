@@ -54,7 +54,7 @@ from .pysr_adapter import (
 from .pysr_adapter import equation_table as pysr_equation_table
 # Tessera adapter — pure-Python SR backend (replaces PySR's Julia dep)
 from .tessera_adapter import (
-    run_tessera, tessera_node_to_expr,
+    run_tessera, tessera_node_to_expr, predict_with_tree,
     equation_table as tessera_equation_table,
 )
 # Default `equation_table` points to the tessera flavour (the new default
@@ -72,6 +72,6 @@ __all__ = [
     "compile_expr",
     "expand_temporal_bank", "run_pysr", "fit_recurrence_step",
     "sympy_to_expr",
-    "run_tessera", "tessera_node_to_expr",
+    "run_tessera", "tessera_node_to_expr", "predict_with_tree",
     "equation_table", "pysr_equation_table", "tessera_equation_table",
 ]

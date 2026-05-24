@@ -291,23 +291,69 @@ def run_tessera(
 def equation_table(gp) -> list[dict]:
     """Return the GP's Pareto front as a list of dicts (one per candidate).
 
-    Mirrors the PySR adapter's `equation_table(model)` interface so
-    downstream report-generation code is unchanged.
+    Schema (designed for drop-in compatibility with the PySR adapter's
+    `equation_table(model)`):
+        complexity  : int                 — tree node count
+        loss        : float               — PySR-compat alias for train_loss
+        train_loss  : float               — same value, explicit name
+        fitness     : float               — loss + parsimony * complexity
+        tree_str    : str                 — human-readable tree
+        tree        : tessera Node        — for predict_with_tree(...)
+                                            and tessera_node_to_expr(...)
+
+    Use `predict_with_tree(row["tree"], X_test, feature_names)` for
+    test-set prediction (analog of PySR's `model.predict(X, index=...)`).
     """
     front = gp.hall_of_fame.pareto_front()
     table = []
     for cand in front:
         table.append({
             "complexity": cand.complexity,
+            "loss": cand.train_loss,         # PySR-compat alias
             "train_loss": cand.train_loss,
             "fitness": cand.fitness,
             "tree_str": str(cand.tree),
+            "tree": cand.tree,
         })
     return table
+
+
+def predict_with_tree(tree, X: np.ndarray, feature_names: list[str]) -> np.ndarray:
+    """Evaluate a tessera tree on a 2D feature matrix.
+
+    Analog of PySR's `model.predict(X_test, index=idx)` — given a
+    single tessera tree from a Pareto-front row, compute its
+    predictions on a held-out feature matrix.
+
+    Parameters
+    ----------
+    tree : tessera Node
+    X : (N, F) array of features
+    feature_names : F-length list of variable names matching the order
+        of columns in X (and the names the tree was discovered with)
+
+    Returns
+    -------
+    (N,) array of predictions; non-finite entries replaced with 0.0
+    """
+    from tessera.expression.tree import evaluate as _tessera_evaluate
+
+    env = {name: np.asarray(X[:, j], dtype=np.float64)
+           for j, name in enumerate(feature_names)}
+    y = _tessera_evaluate(tree, env)
+    y = np.asarray(y, dtype=np.float64)
+    # Broadcast scalar to N (for Const-only trees)
+    if y.ndim == 0:
+        y = np.full(X.shape[0], float(y))
+    # Replace non-finite predictions with 0 (matches the GP scorer's
+    # NaN-handling convention)
+    y = np.where(np.isfinite(y), y, 0.0)
+    return y
 
 
 __all__ = [
     "run_tessera",
     "tessera_node_to_expr",
     "equation_table",
+    "predict_with_tree",
 ]
