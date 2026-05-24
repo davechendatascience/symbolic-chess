@@ -7,13 +7,13 @@ Core abstractions (all in `core`):
     Operator     — base operation with arity + callable + display symbol
     Expr         — tree node: Operator + children
 
-The REGISTRY dict contains named instances of the base operators (arithmetic,
-pointwise nonlinear, temporal, crossing/regime). Search tools (PySR adapter,
-genetic programming, exhaustive enumeration) can pull from REGISTRY without
-caring about implementation details.
+The REGISTRY dict contains named instances of the base operators
+(arithmetic, pointwise nonlinear, temporal, crossing/regime). Search
+tools (tessera adapter, genetic programming, exhaustive enumeration)
+can pull from REGISTRY without caring about implementation details.
 
-Design property: zero domain-specific infrastructure dependencies. Pure numpy
-+ python-chess for board features.
+Design property: zero domain-specific infrastructure dependencies. Pure
+numpy + python-chess for board features.
 
 Usage:
     from symbolic_chess.expression_layer import Variable, Constant, add, mul, tanh, ema
@@ -24,6 +24,16 @@ Usage:
     print(expr.to_string())      # → "(tanh(x) * ema(x, 10))"
     print(expr.complexity())     # → 6
     print(expr.leaves())         # → {"x"}
+
+SR backend (2026-05-24):
+    The symbolic-regression search is performed by `tessera` (pure-Python
+    SR library, pinned in pyproject.toml). Use `run_tessera(...)` for
+    the search; downstream code uses `equation_table(gp)` and
+    `predict_with_tree(tree, X, feature_names)` for the Pareto-front
+    inspection + test-set prediction.
+
+    The PySR/Julia backend that previously lived in `pysr_adapter.py`
+    was removed in this same date; see git history for the rationale.
 """
 from .core import (
     # leaves
@@ -45,22 +55,19 @@ from .core import (
     # compilation
     compile_expr,
 )
-# PySR adapter — deferred Julia/pysr imports, safe to import here
-from .pysr_adapter import (
-    expand_temporal_bank, run_pysr, fit_recurrence_step,
+# Temporal-feature pre-computation + sympy parsing (utilities, not
+# SR-backend-specific). Was previously inside pysr_adapter.py;
+# extracted on 2026-05-24 when PySR was removed.
+from .temporal_utils import (
+    expand_temporal_bank,
     sympy_to_expr,
 )
-# Re-export the PySR equation_table under its full name for clarity
-from .pysr_adapter import equation_table as pysr_equation_table
-# Tessera adapter — pure-Python SR backend (replaces PySR's Julia dep)
+# Tessera adapter — pure-Python SR backend (replaces the PySR/Julia
+# backend that was removed 2026-05-24).
 from .tessera_adapter import (
     run_tessera, tessera_node_to_expr, predict_with_tree,
-    equation_table as tessera_equation_table,
+    equation_table,
 )
-# Default `equation_table` points to the tessera flavour (the new default
-# backend); old callers that want PySR's equations should use
-# `pysr_equation_table`.
-equation_table = tessera_equation_table
 
 __all__ = [
     "Variable", "Constant", "Operator", "HigherOrderOperator", "Expr", "REGISTRY",
@@ -70,8 +77,7 @@ __all__ = [
     "ind_gt", "ind_abs_gt", "sign_change",
     "fold", "scan",
     "compile_expr",
-    "expand_temporal_bank", "run_pysr", "fit_recurrence_step",
-    "sympy_to_expr",
+    "expand_temporal_bank", "sympy_to_expr",
     "run_tessera", "tessera_node_to_expr", "predict_with_tree",
-    "equation_table", "pysr_equation_table", "tessera_equation_table",
+    "equation_table",
 ]

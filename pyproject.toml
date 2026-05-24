@@ -25,7 +25,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-pysr = ["pysr"]
 dev = ["pytest", "matplotlib"]
 
 [tool.setuptools.packages.find]

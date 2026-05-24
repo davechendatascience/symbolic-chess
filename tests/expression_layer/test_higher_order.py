@@ -175,41 +175,10 @@ def test_nested_scan_in_arithmetic_with_other_variable():
     assert np.allclose(out, [11.0, 23.0, 36.0])
 
 
-# ---------------- Test 4: PySR rediscovery (slow, requires Julia/PySR) ----------------
-
-@pytest.mark.slow
-def test_pysr_rediscovers_ar1_recurrence():
-    """PySR rediscovers the AR(1)/EMA per-step rule from i.i.d. samples.
-
-    Marked `slow` — depends on PySR + Julia. The benchmark
-    `benchmarks/run_fold_rediscover_ema.py` is the canonical artefact;
-    this test is the pytest mirror so CI / `pytest -m slow` can gate on it.
-    """
-    pytest.importorskip("pysr")
-    from symbolic_chess.expression_layer import fit_recurrence_step
-
-    rng = np.random.default_rng(0)
-    n = 3000
-    halflife = 10.0
-    alpha = 1.0 - 0.5 ** (1.0 / halflife)
-    acc_t = rng.standard_normal(n)
-    x_t = rng.standard_normal(n)
-    y_next = alpha * x_t + (1.0 - alpha) * acc_t
-
-    model, g_expr = fit_recurrence_step(
-        acc_t, x_t, y_next,
-        binary_operators=["+", "-", "*"],
-        unary_operators=[],
-        niterations=30, populations=15, population_size=30, maxsize=10,
-        verbosity=0, procs=1, random_state=0,
-    )
-    assert g_expr is not None, "PySR returned no Expr"
-    # Discovered g should evaluate to (approximately) the AR(1) form on the
-    # training samples themselves.
-    pred = np.array([
-        float(g_expr.evaluate({"_acc": acc_t[i], "_x": x_t[i]}))
-        for i in range(0, n, 10)   # subsample to keep this fast
-    ])
-    true = y_next[::10]
-    err = np.max(np.abs(pred - true))
-    assert err < 1e-3, f"PySR-discovered g deviates by {err}, expected < 1e-3"
+# Note (2026-05-24): the `test_pysr_rediscovers_ar1_recurrence` test
+# that used to live here was deleted along with the PySR backend.
+# Recurrence-discovery for fold/scan is still doable via tessera's GP
+# but requires a thin wrapper analog of the removed
+# `fit_recurrence_step`; tracked as a "nice to have" for a future
+# iteration. The fold/scan operators themselves (tested above) are
+# unchanged.
